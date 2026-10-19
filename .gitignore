@@ -1,0 +1,29 @@
+__pycache__/
+*.pyc
+.runtime/
+.deps/
+.cache/
+
+# Local configuration, fonts and diagnostic previews
+/settings.json
+/fonts/*
+!/fonts/.gitkeep
+/preview.jpg
+/tmp-preview.jpg
+*.ttf
+*.otf
+*.woff
+*.woff2
+*.ttc
+*.otc
+*.assetbundle
+*.unity3d
+*.bundle
+
+# Editor and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.log

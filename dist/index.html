@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f6f7f3">
+  <meta name="description" content="字间，本地字体的灵感展厅。自动发现字体、实时试字，找到恰到好处的表达。">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/styles.css">
+  <title>字间 · 本地字体展厅</title>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <svg class="icon-defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10H3Z"/><path d="M3 10h18"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4 4"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.3.9-4.6 4.4 1.1 6.3-5.6-3-5.6 3 1.1-6.3L3 9.6l6.2-.9Z"/></symbol>
+    <symbol id="i-compare" viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 7a7 7 0 0 1 11.5-1L20 9M4 15l2.4 3A7 7 0 0 0 17.9 17"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5M4 15v5h16v-5"/></symbol>
+  </svg>
+  <a class="skip-link" href="#font-library">跳到字体库</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="/" aria-label="字间首页"><span class="brand-mark">字</span><span class="brand-name">字间<span>TYPE ROOM</span></span></a>
+      <nav class="main-nav" aria-label="主要导航">
+        <button class="nav-link active" data-tab="all" aria-pressed="true">字体库<span id="nav-count" class="nav-count">0</span></button>
+        <button class="nav-link" data-tab="favorites" aria-pressed="false">我的收藏</button>
+        <button class="nav-link" data-tab="compare" aria-pressed="false">对比台<span id="compare-count" class="nav-count" hidden>0</span></button>
+      </nav>
+      <div class="header-actions"><span id="sync-status" class="sync-status"><span class="status-dot"></span><span id="sync-label">正在连接</span></span><button id="folder-button" class="button button-outline"><svg class="icon"><use href="#i-folder"/></svg><span>打开字体文件夹</span></button></div>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span></span>A SPACE FOR YOUR TYPE</p>
+        <h1 id="hero-title">好字之间，<br>灵感<span class="hero-accent">自现。</span></h1>
+        <p class="hero-description">每一款字体，都有自己的语气。<br>在这里，找到你的下一种表达。</p>
+        <button id="import-button" class="button button-dark"><svg class="icon"><use href="#i-plus"/></svg>添加字体<span class="button-arrow">↗</span></button>
+        <span class="hero-hint">也可以直接把字体拖进来</span>
+      </div>
+      <div class="type-art" aria-hidden="true">
+        <div class="art-cross cross-top">+</div><div class="art-cross cross-bottom">+</div>
+        <div class="art-guide horizontal"></div><div class="art-guide vertical"></div>
+        <span class="art-annotation">THE BEAUTY OF LETTERS</span>
+        <span class="art-character">永</span><span class="art-latin">Aa<span>.</span></span>
+        <span class="art-caption">横 · 竖 · 撇 · 捺</span><span class="art-index">字形研究 / 001</span>
+      </div>
+    </section>
+
+    <section class="preview-controls" aria-label="字体预览设置">
+      <div class="preview-text-control">
+        <div class="control-heading"><label for="preview-text">预览文字</label><div class="text-presets" aria-label="预设文字"><button data-preset="chinese" class="active">中文</button><button data-preset="japanese">日文</button><button data-preset="english">英文</button><button data-preset="numbers">数字</button></div></div>
+        <textarea id="preview-text" rows="2" maxlength="300" placeholder="输入一些文字，看看它们的样子…" spellcheck="false">山河远阔，人间烟火。</textarea>
+      </div>
+      <div class="range-control"><div class="control-heading"><label for="font-size">字号</label><output for="font-size" id="font-size-value">36<span>px</span></output></div><div class="range-row"><span class="small-a">A</span><input id="font-size" type="range" min="16" max="80" value="36"><span class="large-a">A</span></div></div>
+      <div class="range-control spacing-control"><div class="control-heading"><label for="letter-spacing">字间距</label><output for="letter-spacing" id="letter-spacing-value">0<span>px</span></output></div><div class="range-row"><span>↔</span><input id="letter-spacing" type="range" min="-1" max="8" step="0.5" value="0"></div></div>
+      <button id="reset-button" class="icon-button reset-button" title="重置预览设置" aria-label="重置预览设置"><svg class="icon"><use href="#i-refresh"/></svg></button>
+    </section>
+
+    <section id="font-library" class="library" aria-labelledby="library-title">
+      <div class="library-heading"><div><h2 id="library-title">发现好字<span id="result-count">0</span></h2><p id="library-subtitle">你的字体，都在这里。</p></div><label class="search-box"><svg class="icon"><use href="#i-search"/></svg><input id="search" type="search" placeholder="搜索字体名称、文件名…" aria-label="搜索字体"><kbd>/</kbd></label></div>
+      <div class="filter-toolbar"><div class="category-filters" aria-label="按字体风格筛选"><button data-category="all" class="active" aria-pressed="true">全部字体</button><button data-category="tmp" aria-pressed="false">TMP 字体</button><button data-category="serif" aria-pressed="false">衬线</button><button data-category="sans" aria-pressed="false">无衬线</button><button data-category="handwriting" aria-pressed="false">书写</button><button data-category="mono" aria-pressed="false">等宽</button><button data-category="other" aria-pressed="false">其他</button></div><div class="view-controls"><select id="sort" aria-label="字体排序"><option value="name">按名称排序</option><option value="newest">最近添加优先</option><option value="weight">按字重排序</option></select><span class="toolbar-divider"></span><button class="icon-button view-button active" data-view="grid" aria-label="网格视图" aria-pressed="true"><svg class="icon"><use href="#i-grid"/></svg></button><button class="icon-button view-button" data-view="list" aria-label="列表视图" aria-pressed="false"><svg class="icon"><use href="#i-list"/></svg></button></div></div>
+      <div id="font-grid" class="font-grid" aria-live="polite" aria-busy="true"></div>
+      <div id="empty-state" class="empty-state" hidden><span class="empty-character">字</span><h3 id="empty-title">正在整理你的字体…</h3><p id="empty-description">稍等片刻，好字即将登场。</p><button id="empty-action" class="button button-dark" hidden>添加字体</button></div>
+      <div class="library-footer"><span><span class="tiny-dot"></span><span id="folder-label">正在读取字体目录</span></span><span id="directory-info">TTF / OTF / WOFF / WOFF2 / TMP</span></div>
+    </section>
+
+    <footer class="page-footer"><span class="footer-brand">字间<span>让字体被看见。</span></span><span>LOCAL FONTS. ENDLESS POSSIBILITIES.</span><span class="privacy-note">字体仅在本机读取</span></footer>
+  </main>
+
+  <div id="compare-dock" class="compare-dock" hidden><span class="dock-symbol"><svg class="icon"><use href="#i-compare"/></svg></span><span>已选 <b id="dock-count">0</b> 款字体<span class="dock-hint">，放在一起看一看</span></span><button id="clear-compare" class="dock-clear">清空</button><button id="show-compare" class="button button-dark">开始对比<svg class="icon"><use href="#i-arrow"/></svg></button></div>
+  <div id="drop-overlay" class="drop-overlay" hidden><div><svg class="icon"><use href="#i-upload"/></svg><h2>让好字，加入进来。</h2><p>松开鼠标，将字体添加到你的字体文件夹</p><span>TTF · OTF · WOFF · WOFF2 · TMP（支持无后缀）</span></div></div>
+  <input id="file-input" type="file" multiple hidden>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="detail-dialog" class="detail-dialog"><div class="dialog-header"><span class="eyebrow">FONT DETAILS</span><button id="close-details" class="icon-button" aria-label="关闭详情"><svg class="icon"><use href="#i-close"/></svg></button></div><h2 id="detail-title"></h2><p id="detail-family"></p><div id="detail-preview" class="detail-preview"></div><dl id="detail-properties"></dl><button id="copy-filename" class="button button-dark">复制文件名</button></dialog>
+  <noscript><p class="noscript">请开启 JavaScript 以查看字体预览。</p></noscript>
+</body>
+</html>
