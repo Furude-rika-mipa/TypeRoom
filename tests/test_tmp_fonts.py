@@ -3,12 +3,14 @@ import io
 from pathlib import Path
 import sys
 import tempfile
+import threading
 import time
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from server import FontLibrary
-from tmp_fonts import is_bundle_header, normalize_font, render_text, style_weight
+from tmp_fonts import TmpStore, is_bundle_header, normalize_font, render_text, style_weight
 from PIL import Image
 
 
@@ -74,6 +76,33 @@ class TmpRenderingTests(unittest.TestCase):
 
 
 class TmpDiscoveryTests(unittest.TestCase):
+    def test_refresh_waits_for_pending_metadata_and_can_time_out(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "new-bundle"
+            source.write_bytes(b"UnityFS\0" + b"\0" * 80)
+            store = TmpStore(root / "cache")
+            started, finish = threading.Event(), threading.Event()
+
+            def extract(path, entry):
+                started.set()
+                finish.wait(3)
+                with store.lock:
+                    entry.update(status="error", error="Invalid test bundle")
+
+            try:
+                stat = source.stat()
+                with patch.object(store, "_extract_metadata", side_effect=extract):
+                    store.describe(source, (stat.st_size, stat.st_mtime_ns))
+                    self.assertTrue(started.wait(1))
+                    self.assertEqual(store.wait_for_metadata(timeout=0), 1)
+                    finish.set()
+                    self.assertEqual(store.wait_for_metadata(timeout=2), 0)
+                    self.assertEqual(store.describe(source, (stat.st_size, stat.st_mtime_ns))[0]["tmp_status"], "error")
+            finally:
+                finish.set()
+                store.close()
+
     def test_bundle_detection_is_based_on_content(self):
         self.assertTrue(is_bundle_header(b"UnityFS\0more bytes"))
         self.assertTrue(is_bundle_header(b"UnityRaw\0more bytes"))

@@ -35,7 +35,11 @@
         <button class="nav-link" data-tab="favorites" aria-pressed="false">我的收藏</button>
         <button class="nav-link" data-tab="compare" aria-pressed="false">对比台<span id="compare-count" class="nav-count" hidden>0</span></button>
       </nav>
-      <div class="header-actions"><span id="sync-status" class="sync-status"><span class="status-dot"></span><span id="sync-label">正在连接</span></span><button id="folder-button" class="button button-outline"><svg class="icon"><use href="#i-folder"/></svg><span>打开字体文件夹</span></button></div>
+      <div class="header-actions">
+        <span id="sync-status" class="sync-status" role="status"><span class="status-dot"></span><span id="sync-label">正在连接</span></span>
+        <button id="refresh-button" class="button button-outline" title="重新扫描字体文件夹"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span>刷新字体</span></button>
+        <button id="folder-button" class="button button-outline" aria-label="打开字体文件夹" title="打开字体文件夹"><svg class="icon" aria-hidden="true"><use href="#i-folder"/></svg><span>打开字体文件夹</span></button>
+      </div>
     </div>
   </header>
 

@@ -8,6 +8,7 @@ import unittest
 from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from server import FontLibrary, contained_path, make_server
@@ -155,6 +156,14 @@ class HttpTests(unittest.TestCase):
         self.assertEqual((self.root / filename).read_bytes(), original)
         self.assertTrue((self.root / "原字体 (2).ttf").is_file())
         self.assertFalse(list(self.root.glob("*.upload")))
+
+    def test_tmp_progress_does_not_scan_for_new_files(self):
+        (self.root / "new.ttf").write_bytes(sample_font())
+        with patch.object(self.server.library, "snapshot", side_effect=AssertionError("Unexpected folder scan")):
+            with self.request("/api/tmp/status") as response:
+                self.assertEqual(json.load(response), {"parsing": 0})
+        with self.request("/api/fonts") as response:
+            self.assertEqual(json.load(response)["count"], 1)
 
     def test_remote_origin_import_is_rejected(self):
         with self.assertRaises(HTTPError) as error:

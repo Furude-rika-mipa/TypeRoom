@@ -255,7 +255,7 @@ class FontLibrary:
             return {
                 "version": version, "folder": str(self.directory), "exists": exists,
                 "fonts": fonts, "count": len(fonts), "ignored": ignored,
-                "unsupported": unsupported, "interval": 3000,
+                "unsupported": unsupported,
                 "tmp_count": len(tmp_ids),
                 "parsing": sum(font.get("tmp_status") == "pending" for font in fonts),
             }
@@ -318,6 +318,8 @@ class GalleryHandler(BaseHTTPRequestHandler):
         route = unquote(urlsplit(self.path).path)
         if route == "/api/fonts":
             return self.write_json(self.library.snapshot())
+        if route == "/api/tmp/status":
+            return self.write_json({"parsing": self.library.tmp.wait_for_metadata()})
         if route == "/api/tmp/render":
             query = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
             try:
@@ -508,7 +510,7 @@ def main():
         print("无法启动本地服务，请在 settings.json 中换一个端口。")
         return 1
     url = f"http://127.0.0.1:{server.server_port}"
-    print(f"\n字间 TYPE ROOM · 本地字体展厅\n字体目录：{directory.resolve()}\nLocal: {url}\n每 3 秒同步一次 · 按 Ctrl+C 退出\n", flush=True)
+    print(f"\n字间 TYPE ROOM · 本地字体展厅\n字体目录：{directory.resolve()}\nLocal: {url}\n点击网页“刷新字体”更新列表 · 按 Ctrl+C 退出\n", flush=True)
     if not directory.is_dir():
         print("提示：字体目录不存在，请检查 settings.json。", flush=True)
     if args.open:

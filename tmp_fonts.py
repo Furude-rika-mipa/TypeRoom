@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import base64
 from collections import OrderedDict
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, wait
 import gzip
 import hashlib
 import io
@@ -193,7 +193,7 @@ class TmpStore:
                     entry.update(status="ready", fonts=index["fonts"])
                 except (OSError, ValueError, KeyError):
                     if not self.closed:
-                        self.executor.submit(self._extract_metadata, path, entry)
+                        entry["future"] = self.executor.submit(self._extract_metadata, path, entry)
             if entry["status"] == "ready":
                 return [{**font, "weight": style_weight(font["style"]), "tmp_status": "ready", "cache_key": entry["key"]} for font in entry["fonts"]]
             return [{
@@ -202,6 +202,16 @@ class TmpStore:
                 "tmp_status": entry["status"], "cache_key": entry["key"],
                 "asset_id": "", "error": entry.get("error"),
             }]
+
+    def wait_for_metadata(self, timeout=20):
+        """Wait for already discovered bundles without rescanning the font folder."""
+        with self.lock:
+            futures = [entry["future"] for entry in self.entries.values()
+                       if entry["status"] == "pending" and "future" in entry]
+        if futures:
+            wait(futures, timeout=timeout)
+        with self.lock:
+            return sum(entry["status"] == "pending" for entry in self.entries.values())
 
     def _extract_metadata(self, path: Path, entry: dict):
         try:
@@ -325,7 +335,7 @@ class TmpStore:
             raise ValueError("TMP 字体尚未就绪，请稍后重试")
         stat = source.stat()
         if f"{stat.st_mtime_ns}-{stat.st_size}" != font["source_revision"]:
-            raise ValueError("字体文件已更新，正在同步")
+            raise ValueError("字体文件已更新，请点击“刷新字体”")
         cache_id = (font["cache_key"], font["asset_id"], text, size, spacing, width, dpr)
         with self.render_lock:
             if cache_id in self.renders:

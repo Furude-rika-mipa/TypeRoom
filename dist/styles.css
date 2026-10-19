@@ -13,3 +13,8 @@
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 @media(min-width:641px){.nav-link{font-size:13px}.header-actions .button{font-size:12px}.hero-description{font-size:12px}.hero-hint{font-size:11px}.control-heading{font-size:11px}.text-presets button{font-size:10px}.library-heading p{font-size:11px}.search-box input{font-size:11px}.category-filters button{font-size:11px}.view-controls select{font-size:11px}.card-title{font-size:14px}.card-subtitle{font-size:10px}.font-badge{font-size:9px}.card-meta{font-size:10px}.library-footer{font-size:10px}}
 .font-badge.tmp{background:#e7efdf;border-color:#d5e3ca;color:#688452}.tmp-preview{font-family:inherit;line-height:1.5;letter-spacing:0;overflow:hidden}.tmp-preview.failed{display:block;font-size:12px}.tmp-canvas{display:block;width:100%;height:auto;max-width:100%}.tmp-missing{font-family:"Segoe UI","Microsoft YaHei UI",sans-serif;font-size:10px;line-height:1.8;letter-spacing:0;white-space:normal;overflow-wrap:anywhere;color:#aa7749;padding-top:5px}.detail-preview.tmp-preview{font-size:12px}.tmp-preview:not(:has(canvas)){font-size:12px;color:#8b957d}.tmp-preview .tmp-canvas{background:transparent}
+.header-actions{gap:12px}#refresh-button{min-width:112px}#refresh-button[aria-busy="true"] .icon{animation:refresh-spin 1s linear infinite}
+@keyframes refresh-spin{to{transform:rotate(360deg)}}
+@media(max-width:780px){#folder-button span{display:none}#folder-button{padding:0 11px}.header-actions{gap:8px}#refresh-button{min-width:94px}}
+@media(max-width:640px){#refresh-button{min-width:84px}}
+@media(prefers-reduced-motion:reduce){#refresh-button[aria-busy="true"] .icon{animation:none}}

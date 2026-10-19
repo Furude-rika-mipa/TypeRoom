@@ -32,7 +32,7 @@ const state = {
 const records = new Map();
 const loadQueue = [];
 let activeLoads = 0;
-let polling = false;
+let refreshTask = null;
 let toastTimer;
 let detailFont = null;
 let dragDepth = 0;
@@ -399,12 +399,12 @@ function renderLibrary() {
   $(".search-box").hidden = compare;
   $(".filter-toolbar").hidden = compare;
   if (!fonts.length) {
-    if (!state.connected) emptyMessage("字体展厅暂时连不上了", "请保持启动窗口运行。\n如果尚未启动，请双击项目里的 start.cmd。", {label: "重新连接", callback: () => pollFonts(true)});
-    else if (!state.exists) emptyMessage("还没有找到这个字体文件夹", "检查 settings.json 中的目录，或连接字体所在的磁盘。\n目录恢复后，这里会自动更新。");
+    if (!state.connected) emptyMessage("字体展厅暂时连不上了", "请保持启动窗口运行。\n如果尚未启动，请双击项目里的 start.cmd，再点击“刷新字体”。", {label: "重新连接", callback: () => refreshFonts(true)});
+    else if (!state.exists) emptyMessage("还没有找到这个字体文件夹", "检查 settings.json 中的目录，或连接字体所在的磁盘。\n目录恢复后，点击右上角“刷新字体”。", {label: "刷新字体", callback: () => refreshFonts(true)});
     else if (compare) emptyMessage("好字，一起看才更清楚", "点击字体卡片上的对比图标，挑选你想一起看的字体。", {label: "去挑选字体", callback: () => changeTab("all")});
     else if (state.search || state.category !== "all") emptyMessage("还没有找到这款字", "试试其他关键词，或切换到全部字体。", {label: "清除筛选", callback: clearFilters});
     else if (state.tab === "favorites") emptyMessage("给喜欢的字体，留一个位置", "点击字体卡片右下角的星标，就能收藏到这里。", {label: "去发现好字", callback: () => changeTab("all")});
-    else emptyMessage("你的第一款字体，即将登场", "把字体放进指定文件夹，或直接拖进这个页面。\n新加入的字体，会自动出现在这里。", {label: "添加字体", callback: () => $("#file-input").click()});
+    else emptyMessage("你的第一款字体，即将登场", "把字体放进指定文件夹后，点击右上角“刷新字体”。\n也可以直接拖进这个页面。", {label: "添加字体", callback: () => $("#file-input").click()});
   }
   updateCardActions();
   updateDock();
@@ -471,65 +471,87 @@ async function showDetails(font) {
   }
 }
 function updateConnection(connected) {
-  const wasConnected = state.connected;
   state.connected = connected;
   $("#sync-status").classList.toggle("offline", !connected);
-  $("#sync-label").textContent = connected ? "自动同步已开启" : "连接已中断";
-  $("#sync-status").title = connected ? "每 3 秒扫描一次字体文件夹，新增和移除均自动同步" : "请保持本地启动窗口运行";
-  if (!connected && wasConnected) toast("与本地服务的连接中断，正在自动重试。", 4500);
+  $("#sync-label").textContent = connected ? "已连接本地服务" : "连接已中断";
+  $("#sync-status").title = connected ? "添加、移除或替换字体后，点击“刷新字体”更新列表" : "请保持本地启动窗口运行，再点击“刷新字体”重试";
 }
-async function pollFonts(force = false) {
-  if (polling) return;
-  polling = true;
+function applyFontSnapshot(data) {
+  if (!Array.isArray(data.fonts)) throw new Error("接口格式错误");
+  const changed = data.version !== state.version || !state.initialized || !state.connected;
+  updateConnection(true);
+  state.initialized = true;
+  if (!changed) return;
+  for (const [id, record] of records) {
+    const latest = data.fonts.find(font => font.id === id);
+    if (!latest || latest.revision !== record.revision) {
+      if (record.face) document.fonts.delete(record.face);
+      records.delete(id);
+    }
+  }
+  state.fonts = data.fonts;
+  state.version = data.version;
+  state.folder = data.folder;
+  state.exists = data.exists;
+  state.selected = new Set([...state.selected].filter(id => data.fonts.some(font => font.id === id)));
+  $("#nav-count").textContent = data.count;
+  $("#folder-label").textContent = data.folder;
+  $("#folder-label").title = data.folder;
+  const formats = "TTF / OTF / WOFF / WOFF2 / TMP";
+  $("#directory-info").textContent = data.parsing ? `正在解析 ${data.parsing} 个 TMP 资源包…` : data.unsupported ? `${data.unsupported} 个字体集合暂不支持 · ${formats}` : `含子文件夹 · ${formats}`;
+  $("#directory-info").title = `${data.ignored ? `已忽略 ${data.ignored} 个隐藏或附带文件。` : ""}目录中的字体有变化时，点击右上角“刷新字体”。`;
+  renderLibrary();
+  if (detailFont && $("#detail-dialog").open) {
+    const latest = data.fonts.find(font => font.id === detailFont.id);
+    if (!latest) $("#detail-dialog").close();
+    else if (latest.revision !== detailFont.revision) showDetails(latest);
+  }
+}
+async function fetchFontData(url, timeout = 8000) {
+  const response = await fetch(url, {cache: "no-store", signal: AbortSignal.timeout(timeout)});
+  if (!response.ok) throw new Error("连接失败");
+  return response.json();
+}
+function refreshFonts(notify = false) {
+  if (refreshTask) return refreshTask.then(() => refreshFonts(notify));
+  refreshTask = loadFonts(notify).finally(() => { refreshTask = null; });
+  return refreshTask;
+}
+async function loadFonts(notify) {
+  const button = $("#refresh-button");
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  $("span", button).textContent = "刷新中…";
+  const oldIds = new Set(state.fonts.map(font => font.id));
   try {
-    const response = await fetch("/api/fonts", {cache: "no-store", signal: AbortSignal.timeout(8000)});
-    if (!response.ok) throw new Error("连接失败");
-    const data = await response.json();
-    if (!Array.isArray(data.fonts)) throw new Error("接口格式错误");
-    const wasInitialized = state.initialized;
-    const oldIds = new Set(state.fonts.map(font => font.id));
-    updateConnection(true);
-    state.initialized = true;
-    if (data.version !== state.version || force) {
-      for (const [id, record] of records) {
-        const latest = data.fonts.find(font => font.id === id);
-        if (!latest || latest.revision !== record.revision) {
-          if (record.face) document.fonts.delete(record.face);
-          records.delete(id);
-        }
-      }
-      state.fonts = data.fonts;
-      state.version = data.version;
-      state.folder = data.folder;
-      state.exists = data.exists;
-      state.selected = new Set([...state.selected].filter(id => data.fonts.some(font => font.id === id)));
-      $("#nav-count").textContent = data.count;
-      $("#folder-label").textContent = data.folder;
-      $("#folder-label").title = data.folder;
-      const formats = "TTF / OTF / WOFF / WOFF2 / TMP";
-      $("#directory-info").textContent = data.parsing ? `正在解析 ${data.parsing} 个 TMP 资源包…` : data.unsupported ? `${data.unsupported} 个字体集合暂不支持 · ${formats}` : `自动扫描子文件夹 · ${formats}`;
-      $("#directory-info").title = data.ignored ? `已忽略 ${data.ignored} 个隐藏或附带文件` : "新增字体将在 3 秒左右自动出现";
-      renderLibrary();
-      if (detailFont && $("#detail-dialog").open) {
-        const latest = data.fonts.find(font => font.id === detailFont.id);
-        if (latest && latest.revision !== detailFont.revision) showDetails(latest);
-      }
-      if (wasInitialized && !state.importing) {
-        const added = data.fonts.filter(font => !oldIds.has(font.id)).length;
-        const removed = [...oldIds].filter(id => !data.fonts.some(font => font.id === id)).length;
-        if (added) toast(`发现 ${added} 款新字体，已自动加入字体库。`);
-        else if (removed) toast(`字体库已同步，移除了 ${removed} 款已不在目录中的字体。`);
-      }
-      if (detailFont && !data.fonts.some(font => font.id === detailFont.id)) $("#detail-dialog").close();
+    let data = await fetchFontData("/api/fonts");
+    applyFontSnapshot(data);
+    while (data.parsing) {
+      // Wait only for this refresh's TMP work; no folder scanning while idle.
+      const progress = await fetchFontData("/api/tmp/status", 25000);
+      if (progress.parsing) continue;
+      data = await fetchFontData("/api/fonts");
+      applyFontSnapshot(data);
+    }
+    if (notify && !state.importing) {
+      const added = data.fonts.filter(font => !oldIds.has(font.id)).length;
+      const removed = [...oldIds].filter(id => !data.fonts.some(font => font.id === id)).length;
+      const changes = [added && `新增 ${added} 款`, removed && `移除 ${removed} 款`].filter(Boolean);
+      toast(!data.exists ? "字体文件夹不存在，请检查路径或连接磁盘。" : changes.length ? `字体库已刷新：${changes.join("，")}。` : `字体库已刷新，共 ${data.count} 款字体。`);
     }
   } catch {
     updateConnection(false);
+    toast("刷新失败，请保持本地启动窗口运行，再点击“刷新字体”重试。", 5000);
     if (!state.initialized) {
       state.initialized = true;
       $("#folder-label").textContent = "本地服务未连接";
       renderLibrary();
     }
-  } finally { polling = false; }
+  } finally {
+    button.disabled = false;
+    button.setAttribute("aria-busy", "false");
+    $("span", button).textContent = "刷新字体";
+  }
 }
 async function postAction(url, body) {
   const response = await fetch(url, {method: "POST", headers: {"X-Type-Room": "1", "Content-Type": "application/octet-stream"}, body});
@@ -553,7 +575,7 @@ async function importFiles(fileList) {
       imported++;
     } catch (error) { errors.push(`${file.name}：${error.message}`); }
   }
-  await pollFonts(true);
+  await refreshFonts();
   state.importing = false;
   $("#import-button").disabled = false;
   $("#file-input").value = "";
@@ -576,6 +598,7 @@ $$("[data-view]").forEach(button => button.addEventListener("click", () => {
 $("#sort").addEventListener("change", event => { state.sort = event.target.value; renderLibrary(); persistSettings(); });
 $("#import-button").addEventListener("click", () => $("#file-input").click());
 $("#file-input").addEventListener("change", event => importFiles(event.target.files));
+$("#refresh-button").addEventListener("click", () => refreshFonts(true));
 $("#folder-button").addEventListener("click", async () => {
   try { await postAction("/api/open-folder"); } catch (error) { toast(error.message, 5000); }
 });
@@ -616,11 +639,9 @@ document.addEventListener("drop", event => {
   if (event.dataTransfer.files.length) importFiles(event.dataTransfer.files);
 });
 window.addEventListener("blur", () => { dragDepth = 0; $("#drop-overlay").hidden = true; });
-document.addEventListener("visibilitychange", () => { if (!document.hidden) pollFonts(); });
 $("#sort").prepend(new Option("按家族浏览", "family"));
 $("#sort").value = state.sort;
 $("#sort option[value='newest']").textContent = "最近修改优先";
 $$("[data-view]").forEach(button => { button.classList.toggle("active", button.dataset.view === state.view); button.setAttribute("aria-pressed", String(button.dataset.view === state.view)); });
 updateControls();
-pollFonts();
-setInterval(() => { if (!document.hidden) pollFonts(); }, 3000);
+refreshFonts();
